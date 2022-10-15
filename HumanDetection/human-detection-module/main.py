@@ -15,10 +15,13 @@ RABBIT_MQ_PASSWORD = "mypassword"
 RABBIT_MQ_EXCHANGE_NAME = "human-detection-exchange"
 RABBIT_MQ_QUEUE_NAME = "human-detection-queue"
 
+#IN-MEMORY DATABASE
+REDIS_PASSWORD = "eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+
 # OUTPUT
 OUTPUT_DIR = "intruders"
 
-human_detection_worker = Human_Detection_Module(OUTPUT_DIR)
+human_detection_worker = Human_Detection_Module(OUTPUT_DIR, REDIS_PASSWORD)
 
 human_detection_worker.start_processing(
     broker_url=RABBIT_MQ_URL,

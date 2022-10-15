@@ -13,6 +13,7 @@ from kombu.mixins import ConsumerMixin
 import datetime
 import os
 import glob
+import redis
 
 
 # Kombu Message Consuming Human_Detection_Worker
@@ -87,10 +88,13 @@ class Human_Detection_Worker(ConsumerMixin):
         )
 
         # Do we need to raise an alarm?
-        alarm_raised = self.alarm_if_needed(
-            camera_id=msg_source,
-            frame_id=frame_id,
-        )
+        if self.database.dbsize() < 6:
+            alarm_raised = False
+        else:
+            alarm_raised = self.alarm_if_needed(
+                camera_id=msg_source,
+                frame_id=frame_id,
+            )
 
         if alarm_raised:
             ts_str = frame_timestamp.replace(":", "-").replace(" ", "_")
@@ -110,8 +114,8 @@ class Human_Detection_Worker(ConsumerMixin):
     def create_database_entry(self, camera_id, frame_id, num_humans, ts):
         num_humans_key = f"camera_{camera_id}_frame_{frame_id}_n_humans"
         timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
-        self.database[num_humans_key] = num_humans
-        self.database[timestamp_key] = ts
+        self.database.set(num_humans_key, num_humans)
+        self.database.set(timestamp_key, ts)
 
 
     def alarm_if_needed(self, camera_id, frame_id):
@@ -119,13 +123,13 @@ class Human_Detection_Worker(ConsumerMixin):
         prev1_n_human_key = f"camera_{camera_id}_frame_{frame_id-1}_n_humans"
         prev2_n_human_key = f"camera_{camera_id}_frame_{frame_id-2}_n_humans"
 
-        prev1_frame_n_humans = self.database.get(prev1_n_human_key, 0)
-        curr_frame_n_humans = self.database.get(n_human_key, 0)
-        prev2_frame_n_humans = self.database.get(prev2_n_human_key, 0)
+        prev1_frame_n_humans = int(self.database.get(prev1_n_human_key))
+        curr_frame_n_humans = int(self.database.get(n_human_key))
+        prev2_frame_n_humans = int(self.database.get(prev2_n_human_key))
 
         if prev1_frame_n_humans + curr_frame_n_humans + prev2_frame_n_humans >= 3:
             timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
-            timestamp = self.database.get(timestamp_key, "")
+            timestamp = self.database.get(timestamp_key)
             print(f"[!!!] INTRUDER DETECTED AT TIMESTAMP {timestamp}[!!!]")
             return True
         return False
@@ -133,8 +137,8 @@ class Human_Detection_Worker(ConsumerMixin):
 
 class Human_Detection_Module:
 
-    def __init__(self, output_dir):
-        self.database = {}
+    def __init__(self, output_dir, database_pass):
+        self.database = redis.Redis( host='localhost', port=6379, password=database_pass, decode_responses=True)
         self.output_dir = output_dir
         self.__bootstrap_output_directory()
 
