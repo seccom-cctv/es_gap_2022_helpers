@@ -1,13 +1,11 @@
 # Software Engineering Course Project - Human Detection Module
 
 ## Clone the repository
-
 Start by cloning the repository: `git clone https://github.com/rafael-direito/es_gap_2022_helpers.git`
 
 After this, move to the HumanDetection directory: `cd HumanDetection`
 
 ## Create a virtual environment and install all dependencies needed
-
 Make sure you are running Python 3.8 or higher
 
 ``` bash
@@ -18,7 +16,6 @@ pip install -r requirements.txt
 ```
 
 ## Run the entities
-
 First, start by opening 3 different terminals. Then move to the *HumanDetection* directory.
 
 ### Terminal 1
@@ -51,7 +48,6 @@ Finally, run the camera: `python3 main.py`
 If everything is executed properly, once you start the camera entity, you should see the following logs:
 
 #### Camera
-
 ```text
 [Camera 1] Sent a frame to the human-detection module (frame_number=546, frame_timestamp=2022-10-06 12:50:12.140264)
 [Camera 1] Sent a frame to the human-detection module (frame_number=552, frame_timestamp=2022-10-06 12:50:58.140264)
@@ -62,7 +58,6 @@ If everything is executed properly, once you start the camera entity, you should
 
 
 #### Human Detection Module
-
 ```text
 I received the frame number 558 from camera_1, with the timestamp 2022-10-06 12:51:44.640264.
 I'm processing the frame...
@@ -86,7 +81,6 @@ Frame 576 has 0 human(s), and was processed in 93.348 ms.
 ```
 
 ### Intruder Images
-
 The Human Detection Module will save the video frames where intruders were detected.
 These frames, per default, will be saved in *human-detection-module/intruders*.
 
@@ -95,14 +89,10 @@ Disclaimer: Every time you run the human-detection-module's code, all previous i
 
 
 ## Troubleshooting
-
 If you encounter any problem, please contact [Rafael Direito](mailto:rafael.neves.direito@ua.pt).
 
 Suggestions for improving the code are welcomed. To do so, open a Pull Request.
 
 
-## Tested on:
+## Tested on
 OSX Monterey 12.0.1
-
-
-
