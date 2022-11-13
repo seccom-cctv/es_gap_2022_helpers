@@ -88,10 +88,13 @@ class Human_Detection_Worker(ConsumerMixin):
         )
 
         # Do we need to raise an alarm?
-        alarm_raised = self.alarm_if_needed(
-            camera_id=msg_source,
-            frame_id=frame_id,
-        )
+        # alarm_raised = self.alarm_if_needed(
+        #     camera_id=msg_source,
+        #     frame_id=frame_id,
+        # )
+        alarm_raised = False
+        if num_humans>0:
+            alarm_raised = True
 
         if alarm_raised:
             ts_str = frame_timestamp.replace(":", "-").replace(" ", "_")
@@ -111,8 +114,8 @@ class Human_Detection_Worker(ConsumerMixin):
     def create_database_entry(self, camera_id, frame_id, num_humans, ts):
         num_humans_key = f"camera_{camera_id}_frame_{frame_id}_n_humans"
         timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
-        self.database.set(num_humans_key, num_humans)
-        self.database.set(timestamp_key, ts)
+        # self.database.set(num_humans_key, num_humans)
+        # self.database.set(timestamp_key, ts)
 
 
     def alarm_if_needed(self, camera_id, frame_id):
@@ -136,7 +139,11 @@ class Human_Detection_Worker(ConsumerMixin):
 class Human_Detection_Module:
 
     def __init__(self, output_dir, database_pass):
-        self.database = redis.Redis( host='localhost', port=6379, password=database_pass, decode_responses=True)
+        #rds = redis.Redis(host='redis-001.3arked.0001.use1.cache.amazonaws.com', port=6379, decode_responses=True, ssl=True)
+        #rds = redis.StrictRedis(host="master.redis-cluster.3arked.use1.cache.amazonaws.com", port=6379, db=0,ssl=True, password=database_pass)
+        #if rds.ping():
+        #    print("Connected")
+        self.database = None
         self.output_dir = output_dir
         self.__bootstrap_output_directory()
 
@@ -172,6 +179,7 @@ class Human_Detection_Module:
         # Kombu Connection
         self.kombu_connection = kombu.Connection(
             connection_string,
+            ssl=True,
             heartbeat=4
         )
 

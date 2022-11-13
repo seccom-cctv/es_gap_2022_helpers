@@ -12,9 +12,9 @@ CAMERA_ID = 1
 NUM_FRAMES_PER_SECOND_TO_PROCESS = 2
 
 # AMQP Variables
-RABBIT_MQ_URL = "localhost:5672"
-RABBIT_MQ_USERNAME = "myuser"
-RABBIT_MQ_PASSWORD = "mypassword"
+RABBIT_MQ_URL = "b-ea70ef40-9456-4646-815c-83e2a1b3079b.mq.us-east-1.amazonaws.com:5671" #"localhost:5672"
+RABBIT_MQ_USERNAME = "myuser01"
+RABBIT_MQ_PASSWORD = "mypassword01"
 RABBIT_MQ_EXCHANGE_NAME = "human-detection-exchange"
 RABBIT_MQ_QUEUE_NAME = "human-detection-queue"
 

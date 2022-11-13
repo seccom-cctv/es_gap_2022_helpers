@@ -7,16 +7,17 @@
 
 
 from human_detection import Human_Detection_Module
+import redis
 
 # AMQP Variables
-RABBIT_MQ_URL = "localhost:5672"
-RABBIT_MQ_USERNAME = "myuser"
-RABBIT_MQ_PASSWORD = "mypassword"
+RABBIT_MQ_URL = "b-ea70ef40-9456-4646-815c-83e2a1b3079b.mq.us-east-1.amazonaws.com:5671" #"localhost:5672"
+RABBIT_MQ_USERNAME = "myuser01"
+RABBIT_MQ_PASSWORD = "mypassword01"
 RABBIT_MQ_EXCHANGE_NAME = "human-detection-exchange"
 RABBIT_MQ_QUEUE_NAME = "human-detection-queue"
 
 #IN-MEMORY DATABASE
-REDIS_PASSWORD = "eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+REDIS_PASSWORD ="mypassword123456"#"eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
 
 # OUTPUT
 OUTPUT_DIR = "intruders"
