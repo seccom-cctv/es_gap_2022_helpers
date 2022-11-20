@@ -163,7 +163,10 @@ class Human_Detection_Module:
         self.kombu_queues = [
             kombu.Queue(
                 name=queue_name,
-                exchange=self.kombu_exchange
+                exchange=self.kombu_exchange,
+                bindings=[
+                    kombu.binding(exchange=self.kombu_exchange, routing_key='hdm')
+                ]
             )
         ]
 

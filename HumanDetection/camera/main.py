@@ -31,6 +31,7 @@ camera.attach_to_message_broker(
     queue_name=RABBIT_MQ_QUEUE_NAME
     )
 
-camera.transmit_video("samples/people-detection.mp4")
+#camera.transmit_video("samples/people-detection.mp4")
+camera.send_snapshot("samples/people-detection.mp4", 10)
 
 print("End of video transmission")
