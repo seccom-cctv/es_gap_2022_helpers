@@ -74,6 +74,9 @@ class Camera:
         print('Start snapshot...')
         time_now = datetime.datetime.now()
 
+        end_frame = 3*60*video_fps + start_frame
+        start_frame = 3*60*video_fps - start_frame if 3*60*video_fps > 0 else 0
+
         frame_count = 0
         frame_id = 0
         while video.isOpened():
@@ -126,7 +129,7 @@ class Camera:
                     #key = cv2.waitKey(1)
                     #if key == ord('q'):
                     #    break
-                if frame_count % frame_step == 0 and frame_count - start_frame > 10:
+                if frame_count > end_frame:
                     break
             else:
                 break
