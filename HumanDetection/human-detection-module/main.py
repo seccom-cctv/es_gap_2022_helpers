@@ -7,13 +7,18 @@
 
 
 from human_detection import Human_Detection_Module
+import os
+from dotenv import load_dotenv
+from pathlib import Path
 
+path = Path("../.env")
+load_dotenv(path)
 # AMQP Variables
-RABBIT_MQ_URL = "localhost:5672"
-RABBIT_MQ_USERNAME = "myuser"
-RABBIT_MQ_PASSWORD = "mypassword"
-RABBIT_MQ_EXCHANGE_NAME = "human-detection-exchange"
-RABBIT_MQ_QUEUE_NAME = "human-detection-queue"
+RABBIT_MQ_URL = os.getenv("RABBIT_MQ_URL")
+RABBIT_MQ_USERNAME = os.getenv("RABBIT_MQ_USERNAME")
+RABBIT_MQ_PASSWORD = os.getenv("RABBIT_MQ_PASSWORD")
+RABBIT_MQ_EXCHANGE_NAME = os.getenv("RABBIT_MQ_EXCHANGE_NAME")
+RABBIT_MQ_QUEUE_NAME = os.getenv("RABBIT_MQ_QUEUE_NAME")
 
 # OUTPUT
 OUTPUT_DIR = "intruders"

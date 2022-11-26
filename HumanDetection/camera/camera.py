@@ -10,7 +10,6 @@ import cv2
 import imutils
 import kombu
 import datetime
-import ssl
 from kombu.mixins import ConsumerMixin
 import requests
 import os

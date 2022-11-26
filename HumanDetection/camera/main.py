@@ -6,19 +6,24 @@
 # @Last Modified time: 2022-10-06 11:19:15
 
 from camera import Camera
+import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+path = Path("../.env")
+load_dotenv(path)
 
 # CAMERA VARIABLES
 CAMERA_ID = 1
 NUM_FRAMES_PER_SECOND_TO_PROCESS = 2
 
 # AMQP Variables
-RABBIT_MQ_URL = "localhost:5672" # "b-eadcd882-eb10-4925-8457-f84a981dd896.mq.us-east-1.amazonaws.com:5671"
-RABBIT_MQ_USERNAME = "myuser"
-RABBIT_MQ_PASSWORD = "mypassword" # "mysecurepassword"
-RABBIT_MQ_EXCHANGE_NAME = "human-detection-exchange"
-RABBIT_MQ_QUEUE_NAME = "human-detection-queue"
-
-API_URL = ""
+RABBIT_MQ_URL = os.getenv("RABBIT_MQ_URL")
+RABBIT_MQ_USERNAME = os.getenv("RABBIT_MQ_USERNAME")
+RABBIT_MQ_PASSWORD = os.getenv("RABBIT_MQ_PASSWORD")
+RABBIT_MQ_EXCHANGE_NAME = os.getenv("RABBIT_MQ_EXCHANGE_NAME")
+RABBIT_MQ_QUEUE_NAME = os.getenv("RABBIT_MQ_QUEUE_NAME")
+API_URL = os.getenv("API_URL")
 
 camera = Camera(
     camera_id=CAMERA_ID,
