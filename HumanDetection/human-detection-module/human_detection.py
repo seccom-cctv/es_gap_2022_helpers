@@ -18,13 +18,14 @@ import glob
 # Kombu Message Consuming Human_Detection_Worker
 class Human_Detection_Worker(ConsumerMixin):
 
-    def __init__(self, connection, queues, database, output_dir):
+    def __init__(self, connection, queues, database, output_dir, producer):
         self.connection = connection
         self.queues = queues
         self.database = database
         self.output_dir = output_dir
         self.HOGCV = cv2.HOGDescriptor()
         self.HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        self.kombu_producer = producer
 
 
     def detect_number_of_humans(self, frame):
@@ -40,7 +41,7 @@ class Human_Detection_Worker(ConsumerMixin):
     def get_consumers(self, Consumer, channel):
         return [
             Consumer(
-                queues=self.queues,
+                queues=self.queues[0],
                 callbacks=[self.on_message],
                 accept=['image/jpeg']
                 )
@@ -48,6 +49,7 @@ class Human_Detection_Worker(ConsumerMixin):
 
 
     def on_message(self, body, message):
+        print(message)
         # Get message headers' information
         msg_source = message.headers["source"]
         frame_timestamp = message.headers["timestamp"]
@@ -100,6 +102,20 @@ class Human_Detection_Worker(ConsumerMixin):
                 ".jpeg"
             output_image_path = os.path.join(self.output_dir, filename)
             cv2.imwrite(output_image_path, image)
+
+            # Alert Camera to send video
+            msg = {
+                "source": msg_source,
+                "frame_id": frame_id,
+            }
+
+            self.kombu_producer.publish(
+                msg,
+                routing_key='hdm-resp1'
+            )
+
+            print(f"Alert on Frame {frame_id} of Camera {msg_source}")
+
             
         print("\n")
 
@@ -159,15 +175,28 @@ class Human_Detection_Module:
             type="direct",
         )
 
+        prod_exchange = kombu.Exchange(
+            name="hdm-to-camera",
+            type="direct",
+            delivery_mode=1
+        )
+
         # Kombu Queues
         self.kombu_queues = [
             kombu.Queue(
                 name=queue_name,
                 exchange=self.kombu_exchange,
                 bindings=[
-                    kombu.binding(exchange=self.kombu_exchange, routing_key='hdm')
+                    kombu.binding(exchange=self.kombu_exchange, routing_key='hdm'),
                 ]
-            )
+            ),
+            kombu.Queue(
+                    name="human-detection-queue-resp",
+                    exchange=prod_exchange,
+                    bindings=[
+                        kombu.binding(prod_exchange, routing_key='hdm-resp1'),
+                    ],
+                )
         ]
 
         # Kombu Connection
@@ -176,11 +205,20 @@ class Human_Detection_Module:
             heartbeat=4
         )
 
+        self.kombu_channel = self.kombu_connection.channel()
+
+        # Kombu Producer
+        self.kombu_producer = kombu.Producer(
+            exchange=prod_exchange,
+            channel=self.kombu_channel
+        )
+
         # Start Human Detection Workers
         self.human_detection_worker = Human_Detection_Worker(
             connection=self.kombu_connection,
             queues=self.kombu_queues,
             database=self.database,
-            output_dir=self.output_dir
+            output_dir=self.output_dir,
+            producer=self.kombu_producer
         )
         self.human_detection_worker.run()
