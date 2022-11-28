@@ -3,4 +3,8 @@ numpy==1.23.3
 opencv-python==4.6.0.66
 imutils==0.5.4
 kombu==5.2.4
+<<<<<<< HEAD
 python-dotenv
+=======
+redis==3.3.8
+>>>>>>> ECP-26-create-in-memory-database-for-hdm
