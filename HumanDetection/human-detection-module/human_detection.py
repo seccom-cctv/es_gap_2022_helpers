@@ -5,6 +5,7 @@
 # @Last Modified by:   Rafael Direito
 # @Last Modified time: 2022-10-07 11:42:57
 
+import ssl
 import numpy as np
 import cv2
 import sys
@@ -13,7 +14,12 @@ from kombu.mixins import ConsumerMixin
 import datetime
 import os
 import glob
-import redis
+from redis import Redis
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 
 # Kombu Message Consuming Human_Detection_Worker
@@ -50,7 +56,7 @@ class Human_Detection_Worker(ConsumerMixin):
 
 
     def on_message(self, body, message):
-        print(message)
+        logging.info(message)
         # Get message headers' information
         msg_source = message.headers["source"]
         frame_timestamp = message.headers["timestamp"]
@@ -58,9 +64,9 @@ class Human_Detection_Worker(ConsumerMixin):
         frame_id = message.headers["frame_id"]
 
         # Debug
-        print(f"I received the frame number {frame_count} from {msg_source}" +
+        logging.info(f"I received the frame number {frame_count} from {msg_source}" +
               f", with the timestamp {frame_timestamp}.")
-        print("I'm processing the frame...")
+        logging.info("I'm processing the frame...")
 
         ts_processing_start = datetime.datetime.now()
         # Process the Frame
@@ -78,7 +84,7 @@ class Human_Detection_Worker(ConsumerMixin):
         processing_duration = ts_processing_end - ts_processing_start
         processing_duration_ms = processing_duration.total_seconds() * 1000
 
-        print(f"Frame {frame_count} has {num_humans} human(s), and was " +
+        logging.info(f"Frame {frame_count} has {num_humans} human(s), and was " +
               f"processed in {processing_duration_ms} ms.")
 
         # Save to Database
@@ -88,12 +94,14 @@ class Human_Detection_Worker(ConsumerMixin):
             num_humans=num_humans,
             ts=frame_timestamp
         )
+        logging.info("Saved to database")
 
         # Do we need to raise an alarm?
         alarm_raised = self.alarm_if_needed(
             camera_id=msg_source,
             frame_id=frame_id,
         )
+        logging.info("Tested alarm raised")
 
         if alarm_raised:
             ts_str = frame_timestamp.replace(":", "-").replace(" ", "_")
@@ -115,13 +123,14 @@ class Human_Detection_Worker(ConsumerMixin):
                 routing_key='hdm-resp1'
             )
 
-            print(f"Alert on Frame {frame_id} of Camera {msg_source}")
+            logging.info(f"Alert on Frame {frame_id} of Camera {msg_source}")
 
             
-        print("\n")
+        logging.info("END")
 
         # Remove Message From Queue
         message.ack()
+        logging.info("ACK\n")
 
 
     def create_database_entry(self, camera_id, frame_id, num_humans, ts):
@@ -144,7 +153,7 @@ class Human_Detection_Worker(ConsumerMixin):
             if prev1_frame_n_humans + curr_frame_n_humans + prev2_frame_n_humans >= 3:
                 timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
                 timestamp = self.database.get(timestamp_key)
-                print(f"[!!!] INTRUDER DETECTED AT TIMESTAMP {timestamp}[!!!]")
+                logging.info(f"[!!!] INTRUDER DETECTED AT TIMESTAMP {timestamp}[!!!]")
                 return True
         return False
 
@@ -152,7 +161,22 @@ class Human_Detection_Worker(ConsumerMixin):
 class Human_Detection_Module:
 
     def __init__(self, output_dir, database_pass):
-        self.database = redis.Redis( host='localhost', port=6379, password=database_pass, decode_responses=True)
+        logging.info("INIT HDM")
+        #self.database = redis.Redis( host='localhost', port=6379, password=database_pass, decode_responses=True)
+        # redis = redis.Redis(host='seccom-redis.3arked.ng.0001.use1.cache.amazonaws.com', 
+        #                     port=6379, 
+        #                     decode_responses=True, 
+        #                     ssl=True,)
+        self.database = Redis(host='seccom-redis.3arked.ng.0001.use1.cache.amazonaws.com', 
+                            port=6379, 
+                            decode_responses=True,
+                            )
+
+        if self.database.ping():
+            logging.info("Connected to database")
+        else:
+            logging.info("Unable to connect to database")
+
         self.output_dir = output_dir
         self.__bootstrap_output_directory()
 
@@ -168,8 +192,12 @@ class Human_Detection_Module:
                          broker_password, exchange_name, queue_name):
 
         # Create Connection String
-        connection_string = f"amqp://{broker_username}:{broker_password}" \
+        connection_string = f"amqps://{broker_username}:{broker_password}" \
             f"@{broker_url}/"
+        logging.info(connection_string)
+
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
 
         # Kombu Exchange
         self.kombu_exchange = kombu.Exchange(
@@ -204,7 +232,8 @@ class Human_Detection_Module:
         # Kombu Connection
         self.kombu_connection = kombu.Connection(
             connection_string,
-            heartbeat=4
+            heartbeat=4,
+            ssl=ssl_context
         )
 
         self.kombu_channel = self.kombu_connection.channel()
