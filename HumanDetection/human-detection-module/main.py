@@ -11,8 +11,8 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-path = Path("../.env")
-load_dotenv(path)
+path = Path(".env-prod")
+load_dotenv()
 # AMQP Variables
 RABBIT_MQ_URL = os.getenv("RABBIT_MQ_URL")
 RABBIT_MQ_USERNAME = os.getenv("RABBIT_MQ_USERNAME")
@@ -22,12 +22,15 @@ RABBIT_MQ_QUEUE_NAME = os.getenv("RABBIT_MQ_QUEUE_NAME")
 
 #IN-MEMORY DATABASE
 REDIS_PASSWORD = "eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+REDIS_URL = os.getenv("REDIS_URL")
 
 # OUTPUT
 OUTPUT_DIR = "intruders"
 
-human_detection_worker = Human_Detection_Module(OUTPUT_DIR, REDIS_PASSWORD)
+print("MAIN: INIT HDM WORKER")
+human_detection_worker = Human_Detection_Module(OUTPUT_DIR, REDIS_PASSWORD, url=REDIS_URL)
 
+print("START PROCESSING")
 human_detection_worker.start_processing(
     broker_url=RABBIT_MQ_URL,
     broker_username=RABBIT_MQ_USERNAME,

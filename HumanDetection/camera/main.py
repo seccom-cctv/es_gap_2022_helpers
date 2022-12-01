@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-path = Path("../.env")
+path = Path("../.env-prod")
 load_dotenv(path)
 
 # CAMERA VARIABLES

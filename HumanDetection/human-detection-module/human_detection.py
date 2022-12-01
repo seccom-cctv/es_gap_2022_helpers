@@ -160,14 +160,9 @@ class Human_Detection_Worker(ConsumerMixin):
 
 class Human_Detection_Module:
 
-    def __init__(self, output_dir, database_pass):
+    def __init__(self, output_dir, database_pass, url):
         logging.info("INIT HDM")
-        #self.database = redis.Redis( host='localhost', port=6379, password=database_pass, decode_responses=True)
-        # redis = redis.Redis(host='seccom-redis.3arked.ng.0001.use1.cache.amazonaws.com', 
-        #                     port=6379, 
-        #                     decode_responses=True, 
-        #                     ssl=True,)
-        self.database = Redis(host='seccom-redis.3arked.ng.0001.use1.cache.amazonaws.com', 
+        self.database = Redis(host=url, 
                             port=6379, 
                             decode_responses=True,
                             )

@@ -5,6 +5,7 @@
 # @Last Modified by:   Rafael Direito
 # @Last Modified time: 2022-10-06 12:02:59
 
+import ssl
 import threading
 import cv2
 import imutils
@@ -145,14 +146,14 @@ class Camera:
     def attach_to_message_broker(self, broker_url, broker_username,
                                  broker_password, exchange_name, queue_name):
         # Create Connection String
-        connection_string = f"amqp://{broker_username}:{broker_password}" \
+        connection_string = f"amqps://{broker_username}:{broker_password}" \
             f"@{broker_url}/"
 
-        #ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        #ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
 
         # Kombu Connection
-        self.kombu_connection = kombu.Connection(connection_string)
+        self.kombu_connection = kombu.Connection(connection_string, ssl=ssl_context)
         self.kombu_channel = self.kombu_connection.channel()
 
         # Kombu Exchange
