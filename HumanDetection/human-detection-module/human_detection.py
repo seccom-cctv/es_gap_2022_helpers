@@ -120,7 +120,7 @@ class Human_Detection_Worker(ConsumerMixin):
 
             self.kombu_producer.publish(
                 msg,
-                routing_key='hdm-resp1'
+                routing_key='intrusion-detected'
             )
 
             logging.info(f"Alert on Frame {frame_id} of Camera {msg_source}")
@@ -201,7 +201,7 @@ class Human_Detection_Module:
         )
 
         prod_exchange = kombu.Exchange(
-            name="hdm-to-camera",
+            name="intrusion-exchange",
             type="direct",
             delivery_mode=1
         )
@@ -216,10 +216,10 @@ class Human_Detection_Module:
                 ]
             ),
             kombu.Queue(
-                    name="human-detection-queue-resp",
+                    name="intrusion-detected",
                     exchange=prod_exchange,
                     bindings=[
-                        kombu.binding(prod_exchange, routing_key='hdm-resp1'),
+                        kombu.binding(prod_exchange, routing_key='intrusion-detected'),
                     ],
                 )
         ]

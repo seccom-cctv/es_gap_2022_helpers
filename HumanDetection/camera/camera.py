@@ -14,7 +14,7 @@ import datetime
 from kombu.mixins import ConsumerMixin
 import requests
 import os
-
+from alarm import Alarm
 
 class myConsumer(ConsumerMixin):
 
@@ -163,8 +163,13 @@ class Camera:
             delivery_mode=1
         )
 
-        cons_exchange = kombu.Exchange(
-            name="hdm-to-camera",
+        camera_exchange = kombu.Exchange(
+            name="camera-exchange",
+            type="direct",
+        )
+
+        alarm_exchange = kombu.Exchange(
+            name="alarm-exchange",
             type="direct",
         )
 
@@ -182,10 +187,18 @@ class Camera:
             ]
         )
         queue2 = kombu.Queue(
-                    name="human-detection-queue-resp",
-                    exchange=cons_exchange,
+                    name="create-snapshot",
+                    exchange=camera_exchange,
                     bindings=[
-                        kombu.binding(cons_exchange, routing_key='hdm-resp1'),
+                        kombu.binding(camera_exchange, routing_key='create-snapshot'),
+                    ],
+                )
+
+        queue3 = kombu.Queue(
+                    name="activate-alarm",
+                    exchange=alarm_exchange,
+                    bindings=[
+                        kombu.binding(alarm_exchange, routing_key='activate-alarm'),
                     ],
                 )
 
@@ -195,6 +208,10 @@ class Camera:
         queue2.maybe_bind(self.kombu_connection)
         queue2.declare()
 
+        queue3.maybe_bind(self.kombu_connection)
+        queue3.declare()
+
+
         self.consumer = myConsumer(
             connection=self.kombu_connection,
             queues=queue2,
@@ -203,10 +220,19 @@ class Camera:
             frames_per_second_to_process=self.frames_per_second_to_process,
             api_url=self.url
         )
+
+        alarm = Alarm(
+            connection=self.kombu_connection,
+            queues=queue3,
+            camera_id=self.camera_id,
+        )
         x = threading.Thread(target=self.consumer.run)
+        y = threading.Thread(target=alarm.run)
         x.start()
+        y.start()
         self.transmit_video("samples/people-detection.mp4")
         x.join()
+        y.join()
 
     def transmit_video(self, video_path):
         video = cv2.VideoCapture(video_path)

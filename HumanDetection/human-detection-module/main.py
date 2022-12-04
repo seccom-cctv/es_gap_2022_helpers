@@ -11,7 +11,7 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-path = Path(".env-prod")
+path = Path("../.env")
 load_dotenv()
 # AMQP Variables
 RABBIT_MQ_URL = os.getenv("RABBIT_MQ_URL")

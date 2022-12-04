@@ -6,11 +6,12 @@
 # @Last Modified time: 2022-10-06 11:19:15
 
 from camera import Camera
+from alarm import Alarm
 import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-path = Path("../.env-prod")
+path = Path("../.env")
 load_dotenv(path)
 
 # CAMERA VARIABLES
