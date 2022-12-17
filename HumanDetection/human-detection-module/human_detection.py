@@ -146,9 +146,13 @@ class Human_Detection_Worker(ConsumerMixin):
             prev1_n_human_key = f"camera_{camera_id}_frame_{frame_id-1}_n_humans"
             prev2_n_human_key = f"camera_{camera_id}_frame_{frame_id-2}_n_humans"
 
-            prev1_frame_n_humans = int(self.database.get(prev1_n_human_key))
-            curr_frame_n_humans = int(self.database.get(n_human_key))
-            prev2_frame_n_humans = int(self.database.get(prev2_n_human_key))
+            val1 = self.database.get(prev1_n_human_key)
+            val2 = self.database.get(n_human_key)
+            val3 = self.database.get(prev2_n_human_key)
+
+            prev1_frame_n_humans = int(val1) if val1 is not None else 0
+            curr_frame_n_humans = int(val2) if val2 is not None else 0
+            prev2_frame_n_humans = int(val3) if val3 is not None else 0
 
             if prev1_frame_n_humans + curr_frame_n_humans + prev2_frame_n_humans >= 3:
                 timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
