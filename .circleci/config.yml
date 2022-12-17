@@ -9,7 +9,7 @@ workflows:
       - aws-ecr/build-and-push-image:
           path: ./HumanDetection/
           region: ${AWS_REGION}
-          repo: ${CIRCLE_PROJECT_REPONAME}
+          repo: human-detection-module
           tag: latest
           filters:
             branches:
