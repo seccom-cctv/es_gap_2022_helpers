@@ -7,7 +7,7 @@ workflows:
   build-and-test:
     jobs:
       - aws-ecr/build-and-push-image:
-          path: ./app/
+          path: ./HumanDetection/
           region: ${AWS_REGION}
           repo: ${CIRCLE_PROJECT_REPONAME}
           tag: latest
