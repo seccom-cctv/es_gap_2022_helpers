@@ -207,7 +207,8 @@ class Human_Detection_Module:
         prod_exchange = kombu.Exchange(
             name="intrusion-exchange",
             type="direct",
-            delivery_mode=1
+            delivery_mode=1,
+            connect_timeout=300
         )
 
         # Kombu Queues
