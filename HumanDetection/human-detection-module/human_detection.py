@@ -118,6 +118,8 @@ class Human_Detection_Worker(ConsumerMixin):
                 "frame_id": frame_id,
             }
 
+            logging.info("before")
+
             self.kombu_producer.publish(
                 msg,
                 routing_key='intrusion-detected'
@@ -166,10 +168,11 @@ class Human_Detection_Module:
 
     def __init__(self, output_dir, database_pass, url):
         logging.info("INIT HDM")
-        self.database = Redis(host=url, 
-                            port=6379, 
-                            decode_responses=True,
-                            )
+        # self.database = Redis(host=url, 
+        #                     port=6379, 
+        #                     decode_responses=True,
+        #                     )
+        self.database =Redis(host='localhost', port=6379, db=0)
 
         if self.database.ping():
             logging.info("Connected to database")
@@ -208,7 +211,7 @@ class Human_Detection_Module:
             name="intrusion-exchange",
             type="direct",
             delivery_mode=1,
-            connect_timeout=300
+            connect_timeout=1000
         )
 
         # Kombu Queues
@@ -232,7 +235,7 @@ class Human_Detection_Module:
         # Kombu Connection
         self.kombu_connection = kombu.Connection(
             connection_string,
-            heartbeat=4,
+            heartbeat=0,
             ssl=ssl_context
         )
 

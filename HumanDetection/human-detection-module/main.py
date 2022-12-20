@@ -11,14 +11,17 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-path = Path("../.env")
-load_dotenv()
+path = Path("/Users/eduardo/Universidade/4Ano/ES/SecCom/es_gap_2022_helpers/HumanDetection/.env")
+load_dotenv(path)
+# os.environ
 # AMQP Variables
 RABBIT_MQ_URL = os.getenv("RABBIT_MQ_URL")
 RABBIT_MQ_USERNAME = os.getenv("RABBIT_MQ_USERNAME")
 RABBIT_MQ_PASSWORD = os.getenv("RABBIT_MQ_PASSWORD")
 RABBIT_MQ_EXCHANGE_NAME = os.getenv("RABBIT_MQ_EXCHANGE_NAME")
 RABBIT_MQ_QUEUE_NAME = os.getenv("RABBIT_MQ_QUEUE_NAME")
+
+print(RABBIT_MQ_URL)
 
 #IN-MEMORY DATABASE
 REDIS_PASSWORD = "eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"

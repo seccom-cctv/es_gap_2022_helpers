@@ -14,6 +14,7 @@ import datetime
 from kombu.mixins import ConsumerMixin
 import requests
 import os
+import time
 from alarm import Alarm
 
 class myConsumer(ConsumerMixin):
@@ -25,6 +26,7 @@ class myConsumer(ConsumerMixin):
         self.camera = camera
         self.frames_per_second_to_process = frames_per_second_to_process
         self.url = api_url
+        self.trigger_cooldown = 0
 
     def get_consumers(self, Consumer, channel):
         return [
@@ -40,21 +42,22 @@ class myConsumer(ConsumerMixin):
         #print(body)
         _id = body['source']
         #print(self.camera_id)
-        if f"camera_{self.camera_id}" == _id:
+        if f"camera_{self.camera_id}" == _id and time.time()-self.trigger_cooldown > 180:
             init_frame = int(body['frame_id'])
+            self.trigger_cooldown = time.time()
             name = self.send_snapshot("samples/people-detection.mp4", init_frame)
 
             print(f"POST VIDEO {name}")
             with open(name, "rb") as vf:
                 data = {'key':'metadata','timeDuration':120}
                 files = {'file': vf}
-                x = requests.post(self.url, files=files, json=data)
+                x = requests.post(self.url + str(self.camera_id), files=files, json=data)
 
             # Delete tmep file
             os.remove(name)
 
-            # Remove Message From Queue
-            message.ack()
+        # Remove Message From Queue
+        message.ack()
 
     def send_snapshot(self, video_path, start_frame):
         video = cv2.VideoCapture(video_path)
@@ -71,6 +74,7 @@ class myConsumer(ConsumerMixin):
         frame_step = video_fps/self.frames_per_second_to_process
         print('Start snapshot... Frame: ', start_frame)
         time_now = datetime.datetime.now()
+        date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
         MINUTES = 1*60
 
@@ -80,7 +84,7 @@ class myConsumer(ConsumerMixin):
         frame_count = 0
         frame_id = 0
         out = None
-        name = f"tempfiles/{self.camera_id}-{start_frame}-{end_frame}.mp4"
+        name = f"tempfiles/camera_{self.camera_id}-{start_frame}-{end_frame}-{date}.mp4"
         while video.isOpened():
 
             # check is True if reading was successful
