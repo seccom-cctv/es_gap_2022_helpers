@@ -74,7 +74,7 @@ class myConsumer(ConsumerMixin):
         frame_step = video_fps/self.frames_per_second_to_process
         print('Start snapshot... Frame: ', start_frame)
         time_now = datetime.datetime.now()
-        date = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         MINUTES = 1*60
 

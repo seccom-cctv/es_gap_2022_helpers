@@ -15,7 +15,7 @@ path = Path("../.env-prod")
 load_dotenv(path)
 
 # CAMERA VARIABLES
-CAMERA_ID = 1
+CAMERA_ID = 2
 NUM_FRAMES_PER_SECOND_TO_PROCESS = 2
 
 # AMQP Variables
