@@ -168,11 +168,11 @@ class Human_Detection_Module:
 
     def __init__(self, output_dir, database_pass, url):
         logging.info("INIT HDM")
-        # self.database = Redis(host=url, 
-        #                     port=6379, 
-        #                     decode_responses=True,
-        #                     )
-        self.database =Redis(host='localhost', port=6379, db=0)
+        self.database = Redis(host=url, 
+                            port=6379, 
+                            decode_responses=True,
+                            )
+        # self.database =Redis(host='localhost', port=6379, db=0)
 
         if self.database.ping():
             logging.info("Connected to database")
