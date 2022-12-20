@@ -5,6 +5,7 @@
 # @Last Modified by:   Rafael Direito
 # @Last Modified time: 2022-10-07 11:42:57
 
+import ssl
 import numpy as np
 import cv2
 import sys
@@ -13,18 +14,25 @@ from kombu.mixins import ConsumerMixin
 import datetime
 import os
 import glob
+from redis import Redis
+
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 
 
 # Kombu Message Consuming Human_Detection_Worker
 class Human_Detection_Worker(ConsumerMixin):
 
-    def __init__(self, connection, queues, database, output_dir):
+    def __init__(self, connection, queues, database, output_dir, producer):
         self.connection = connection
         self.queues = queues
         self.database = database
         self.output_dir = output_dir
         self.HOGCV = cv2.HOGDescriptor()
         self.HOGCV.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        self.kombu_producer = producer
 
 
     def detect_number_of_humans(self, frame):
@@ -40,7 +48,7 @@ class Human_Detection_Worker(ConsumerMixin):
     def get_consumers(self, Consumer, channel):
         return [
             Consumer(
-                queues=self.queues,
+                queues=self.queues[0],
                 callbacks=[self.on_message],
                 accept=['image/jpeg']
                 )
@@ -48,6 +56,7 @@ class Human_Detection_Worker(ConsumerMixin):
 
 
     def on_message(self, body, message):
+        logging.info(message)
         # Get message headers' information
         msg_source = message.headers["source"]
         frame_timestamp = message.headers["timestamp"]
@@ -55,9 +64,9 @@ class Human_Detection_Worker(ConsumerMixin):
         frame_id = message.headers["frame_id"]
 
         # Debug
-        print(f"I received the frame number {frame_count} from {msg_source}" +
+        logging.info(f"I received the frame number {frame_count} from {msg_source}" +
               f", with the timestamp {frame_timestamp}.")
-        print("I'm processing the frame...")
+        logging.info("I'm processing the frame...")
 
         ts_processing_start = datetime.datetime.now()
         # Process the Frame
@@ -75,7 +84,7 @@ class Human_Detection_Worker(ConsumerMixin):
         processing_duration = ts_processing_end - ts_processing_start
         processing_duration_ms = processing_duration.total_seconds() * 1000
 
-        print(f"Frame {frame_count} has {num_humans} human(s), and was " +
+        logging.info(f"Frame {frame_count} has {num_humans} human(s), and was " +
               f"processed in {processing_duration_ms} ms.")
 
         # Save to Database
@@ -85,12 +94,14 @@ class Human_Detection_Worker(ConsumerMixin):
             num_humans=num_humans,
             ts=frame_timestamp
         )
+        logging.info("Saved to database")
 
         # Do we need to raise an alarm?
         alarm_raised = self.alarm_if_needed(
             camera_id=msg_source,
             frame_id=frame_id,
         )
+        logging.info("Tested alarm raised")
 
         if alarm_raised:
             ts_str = frame_timestamp.replace(":", "-").replace(" ", "_")
@@ -100,41 +111,74 @@ class Human_Detection_Worker(ConsumerMixin):
                 ".jpeg"
             output_image_path = os.path.join(self.output_dir, filename)
             cv2.imwrite(output_image_path, image)
+
+            # Alert Camera to send video
+            msg = {
+                "source": msg_source,
+                "frame_id": frame_id,
+            }
+
+            logging.info("before")
+
+            self.kombu_producer.publish(
+                msg,
+                routing_key='intrusion-detected'
+            )
+
+            logging.info(f"Alert on Frame {frame_id} of Camera {msg_source}")
+
             
-        print("\n")
+        logging.info("END")
 
         # Remove Message From Queue
         message.ack()
+        logging.info("ACK\n")
 
 
     def create_database_entry(self, camera_id, frame_id, num_humans, ts):
         num_humans_key = f"camera_{camera_id}_frame_{frame_id}_n_humans"
         timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
-        self.database[num_humans_key] = num_humans
-        self.database[timestamp_key] = ts
+        self.database.set(num_humans_key, num_humans)
+        self.database.set(timestamp_key, ts)
 
 
     def alarm_if_needed(self, camera_id, frame_id):
-        n_human_key = f"camera_{camera_id}_frame_{frame_id}_n_humans"
-        prev1_n_human_key = f"camera_{camera_id}_frame_{frame_id-1}_n_humans"
-        prev2_n_human_key = f"camera_{camera_id}_frame_{frame_id-2}_n_humans"
+        if self.database.dbsize() >= 6:
+            n_human_key = f"camera_{camera_id}_frame_{frame_id}_n_humans"
+            prev1_n_human_key = f"camera_{camera_id}_frame_{frame_id-1}_n_humans"
+            prev2_n_human_key = f"camera_{camera_id}_frame_{frame_id-2}_n_humans"
 
-        prev1_frame_n_humans = self.database.get(prev1_n_human_key, 0)
-        curr_frame_n_humans = self.database.get(n_human_key, 0)
-        prev2_frame_n_humans = self.database.get(prev2_n_human_key, 0)
+            val1 = self.database.get(prev1_n_human_key)
+            val2 = self.database.get(n_human_key)
+            val3 = self.database.get(prev2_n_human_key)
 
-        if prev1_frame_n_humans + curr_frame_n_humans + prev2_frame_n_humans >= 3:
-            timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
-            timestamp = self.database.get(timestamp_key, "")
-            print(f"[!!!] INTRUDER DETECTED AT TIMESTAMP {timestamp}[!!!]")
-            return True
+            prev1_frame_n_humans = int(val1) if val1 is not None else 0
+            curr_frame_n_humans = int(val2) if val2 is not None else 0
+            prev2_frame_n_humans = int(val3) if val3 is not None else 0
+
+            if prev1_frame_n_humans + curr_frame_n_humans + prev2_frame_n_humans >= 3:
+                timestamp_key = f"camera_{camera_id}_frame_{frame_id}_timestamp"
+                timestamp = self.database.get(timestamp_key)
+                logging.info(f"[!!!] INTRUDER DETECTED AT TIMESTAMP {timestamp}[!!!]")
+                return True
         return False
 
 
 class Human_Detection_Module:
 
-    def __init__(self, output_dir):
-        self.database = {}
+    def __init__(self, output_dir, database_pass, url):
+        logging.info("INIT HDM")
+        self.database = Redis(host=url, 
+                            port=6379, 
+                            decode_responses=True,
+                            )
+        # self.database =Redis(host='localhost', port=6379, db=0)
+
+        if self.database.ping():
+            logging.info("Connected to database")
+        else:
+            logging.info("Unable to connect to database")
+
         self.output_dir = output_dir
         self.__bootstrap_output_directory()
 
@@ -150,8 +194,12 @@ class Human_Detection_Module:
                          broker_password, exchange_name, queue_name):
 
         # Create Connection String
-        connection_string = f"amqp://{broker_username}:{broker_password}" \
+        connection_string = f"amqps://{broker_username}:{broker_password}" \
             f"@{broker_url}/"
+        logging.info(connection_string)
+
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        ssl_context.set_ciphers('ECDHE+AESGCM:!ECDSA')
 
         # Kombu Exchange
         self.kombu_exchange = kombu.Exchange(
@@ -159,18 +207,44 @@ class Human_Detection_Module:
             type="direct",
         )
 
+        prod_exchange = kombu.Exchange(
+            name="intrusion-exchange",
+            type="direct",
+            delivery_mode=1,
+            connect_timeout=1000
+        )
+
         # Kombu Queues
         self.kombu_queues = [
             kombu.Queue(
                 name=queue_name,
-                exchange=self.kombu_exchange
-            )
+                exchange=self.kombu_exchange,
+                bindings=[
+                    kombu.binding(exchange=self.kombu_exchange, routing_key='hdm'),
+                ]
+            ),
+            kombu.Queue(
+                    name="intrusion-detected",
+                    exchange=prod_exchange,
+                    bindings=[
+                        kombu.binding(prod_exchange, routing_key='intrusion-detected'),
+                    ],
+                )
         ]
 
         # Kombu Connection
         self.kombu_connection = kombu.Connection(
             connection_string,
-            heartbeat=4
+            heartbeat=0,
+            ssl=ssl_context
+        )
+
+        self.kombu_channel = self.kombu_connection.channel()
+
+        # Kombu Producer
+        self.kombu_producer = kombu.Producer(
+            exchange=prod_exchange,
+            channel=self.kombu_channel
         )
 
         # Start Human Detection Workers
@@ -178,6 +252,7 @@ class Human_Detection_Module:
             connection=self.kombu_connection,
             queues=self.kombu_queues,
             database=self.database,
-            output_dir=self.output_dir
+            output_dir=self.output_dir,
+            producer=self.kombu_producer
         )
         self.human_detection_worker.run()
